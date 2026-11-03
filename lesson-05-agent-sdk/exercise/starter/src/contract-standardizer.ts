@@ -91,13 +91,30 @@ export async function standardizeContract(
 ): Promise<StandardizedContract> {
   const outputPath = path.join(STANDARDIZED_FOLDER, outputFilename);
 
-  // TODO: Implement the function
+  try {
+    let raw = '';
 
-  return {
-    inputPath,
-    outputPath,
-    raw: '' // TODO: Return raw result
-  };
+    // Call the agent with query() from Claude Agent SDK
+    for await (const message of query({
+      prompt: contractStandardizerPrompt(inputPath, outputPath),
+      options: {
+        model,
+        allowedTools: ["Read", "Write"],
+      },
+    })) {
+      // Capture the raw result when agent completes successfully
+      if (message.type === "result" && message.subtype === "success") {
+        raw = message.result;
+      }
+    }
 
-  // TODO: Catch any errors and re-throw with message: "Failed to standardize contract: {original message}"
+    return {
+      inputPath,
+      outputPath,
+      raw,
+    };
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    throw new Error(`Failed to standardize contract: ${errorMessage}`);
+  }
 }

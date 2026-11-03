@@ -34,9 +34,12 @@ async function testWithThinking() {
   console.log("📊 Analysis:");
   console.log(result.analysis);
 
-  console.log(`💭 Thinking steps captured:`);
+  console.log(`\n💭 Thinking steps captured (${result.thinkingSteps.length} steps):`);
 
-  // TODO: show thinking steps for full audit trail
+  for (let i = 0; i < result.thinkingSteps.length; i++) {
+    console.log(`\n--- Thinking Step ${i + 1} ---`);
+    console.log(result.thinkingSteps[i]);
+  }
 
   console.log("\n✅ Extended thinking provides audit trail for compliance!");
 }

@@ -1,16 +1,37 @@
-%% TODO: Design your multi-agent architecture
-%%
-%% Your diagram should show:
-%% - An incoming ticket entry point
-%% - A Triage Agent that categorizes tickets and determines urgency, type, and customer tier
-%% - 3 specialized agents running in parallel (Technical, Billing, Knowledge Base)
-%% - A Routing Agent that evaluates all analysis and decides the final destination
-%% - 3 destinations: Auto-response (~40%), Human Team (~55%), Escalation (~5%)
-%%
-%% For each agent, label: name, key tools, model (Haiku or Sonnet), and what it handles
-%% Tip: use style statements to color-code different agent types
-%%      see demo/diagrams/multi-agent.mmd for color examples and Mermaid syntax
-%% Render with: mmdc -i diagrams/multi-agent.mmd -o diagrams/multi-agent.svg
-
 graph TB
-    %% Add your nodes and connections here
+    Ticket["<b>Incoming Ticket</b><br/>Email | Chat | Web"]
+
+    Triage["<b>Triage Agent</b><br/><br/><b>Tools:</b><br/>- CRM Lookup<br/>- Customer DB<br/><br/><b>Model:</b> Haiku<br/><br/><b>Output:</b><br/>- Urgency Level<br/>- Customer Tier<br/>- Issue Type"]
+
+    Technical["<b>Technical Agent</b><br/><br/><b>Tools:</b><br/>- Error Logs<br/>- API Docs<br/>- GitHub Issues<br/><br/><b>Model:</b> Sonnet<br/><br/><b>Analyzes:</b><br/>- Bug reports<br/>- API issues<br/>- Integrations"]
+
+    Billing["<b>Billing Agent</b><br/><br/><b>Tools:</b><br/>- Billing API<br/>- Payment Records<br/><br/><b>Model:</b> Haiku<br/><br/><b>Analyzes:</b><br/>- Charges<br/>- Refunds<br/>- Subscriptions"]
+
+    KB["<b>Knowledge Base Agent</b><br/><br/><b>Tools:</b><br/>- KB Search<br/>- FAQ Database<br/><br/><b>Model:</b> Haiku<br/><br/><b>Searches:</b><br/>- Similar issues<br/>- Solutions<br/>- Confidence score"]
+
+    Routing["<b>Routing Agent</b><br/><br/><b>Tools:</b><br/>- Ticket System<br/>- Team Queues<br/><br/><b>Model:</b> Haiku<br/><br/><b>Decision Logic:</b><br/>- KB Confidence<br/>- Urgency<br/>- Type"]
+
+    AutoResponse["<b>Auto-Response</b><br/>~40% of tickets<br/>FAQ/Solution sent"]
+    HumanTeam["<b>Route to Human Team</b><br/>~55% of tickets<br/>L1/L2 Support"]
+    Escalation["<b>Escalation Queue</b><br/>~5% of tickets<br/>Manager Review"]
+
+    Ticket --> Triage
+    Triage --> Technical
+    Triage --> Billing
+    Triage --> KB
+    Technical --> Routing
+    Billing --> Routing
+    KB --> Routing
+    Routing --> AutoResponse
+    Routing --> HumanTeam
+    Routing --> Escalation
+
+    style Ticket fill:#e3f2fd,stroke:#333,stroke-width:2px
+    style Triage fill:#fff4e6,stroke:#333,stroke-width:2px
+    style Technical fill:#e8f5e9,stroke:#333,stroke-width:2px
+    style Billing fill:#e8f5e9,stroke:#333,stroke-width:2px
+    style KB fill:#e8f5e9,stroke:#333,stroke-width:2px
+    style Routing fill:#fff4e6,stroke:#333,stroke-width:2px
+    style AutoResponse fill:#c8e6c9,stroke:#333,stroke-width:2px
+    style HumanTeam fill:#c8e6c9,stroke:#333,stroke-width:2px
+    style Escalation fill:#ffccbc,stroke:#333,stroke-width:2px

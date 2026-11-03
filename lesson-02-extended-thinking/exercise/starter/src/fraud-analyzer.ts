@@ -47,28 +47,64 @@ export interface FraudAnalysis {
 // -----------------------------------------------------------------------------
 
 export async function analyzeFraudRisk(transaction: Transaction): Promise<FraudAnalysis> {
-  // TODO: Create the API call with extended thinking enabled
-  //  const rawResponse = await client.messages.create({ ... });
-  //  const response = ensureParsedResponse(rawResponse as any); // Required for Vocareum
+  // Build the user prompt with transaction details
+  const userPrompt = `
+Analyze this transaction for fraud risk:
 
-  // Use client.messages.create() with these parameters:
+TRANSACTION:
+- ID: ${transaction.id}
+- Amount: $${transaction.amount}
+- Merchant: ${transaction.merchant}
+- Category: ${transaction.category}
+- Location: ${transaction.location}
+- Time: ${transaction.time}
 
-  // TODO: Build the user prompt with transaction details
-  // Include:
-  //   - Transaction: id, amount, merchant, category, location, time
-  //   - Customer History: typicalAmount, typicalLocation, accountAgeDays, previousFlags
-  //   - Ask Claude to analyze for fraud patterns and provide risk assessment
+CUSTOMER HISTORY:
+- Typical Amount: $${transaction.customerHistory.typicalAmount}
+- Typical Location: ${transaction.customerHistory.typicalLocation}
+- Account Age: ${transaction.customerHistory.accountAgeDays} days
+- Previous Fraud Flags: ${transaction.customerHistory.previousFlags}
 
-  // TODO: Extract thinking steps and final response from content blocks
+Please analyze this transaction for fraud patterns and provide:
+1. Risk Level (LOW, MEDIUM, HIGH, CRITICAL)
+2. Key Risk Factors
+3. Recommendation (APPROVE, REVIEW, BLOCK)
+`;
+
+  // Create the API call with extended thinking enabled
+  const rawResponse = await client.messages.create({
+    model: model,
+    max_tokens: 16000,
+    thinking: {
+      type: "enabled",
+      budget_tokens: 10000,
+    },
+    messages: [
+      {
+        role: "user",
+        content: userPrompt,
+      },
+    ],
+  });
+
+  const response = ensureParsedResponse(rawResponse as any); // Required for Vocareum
+
+  // Extract thinking steps and final response from content blocks
   // Extended thinking responses have multiple content blocks:
   //   - "thinking" blocks contain the reasoning process
   //   - "text" blocks contain the final response
   const thinkingSteps: string[] = [];
   let analysis = "";
 
-  // TODO: Loop through response.content and extract blocks
+  // Loop through response.content and extract blocks
+  for (const block of response.content) {
+    if (block.type === "thinking") {
+      thinkingSteps.push(block.thinking);
+    } else if (block.type === "text") {
+      analysis = block.text;
+    }
+  }
 
-  // Placeholder return - replace with actual implementation
   return {
     transactionId: transaction.id,
     analysis,

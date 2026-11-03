@@ -1,16 +1,61 @@
-%% TODO: Create a detailed workflow diagram showing the ticket journey from start to finish
-%%
-%% Your diagram should show:
-%% - START: New ticket received
-%% - TRIAGE: Agent categorizes ticket, looks up customer in CRM, sets SLA deadline by tier
-%% - PARALLEL execution: 3 specialized agents running simultaneously
-%% - ROUTING: Decision logic based on KB confidence, ticket type, urgency, and customer tier
-%% - DESTINATIONS: Auto-response, Human Team, Escalation
-%%
-%% Tip: use flowchart TD (top-down) syntax
-%%      use dashed arrows -.-> to represent parallel execution paths
-%%      see demo/diagrams/workflow.mmd for Mermaid syntax examples
-%% Render with: mmdc -i diagrams/workflow.mmd -o diagrams/workflow.svg
-
 flowchart TD
-    %% Add your workflow steps and connections here
+    Start(["<b>START</b><br/>New Ticket Received"])
+    Triage["<b>TRIAGE AGENT</b><br/>- Extract customer info<br/>- Identify issue type<br/>- Determine urgency<br/>- Set SLA deadline"]
+
+    TechCheck{"Is this a<br/>technical issue?"}
+    BillingCheck{"Is this a<br/>billing issue?"}
+
+    TechAgent["<b>TECHNICAL AGENT</b><br/>(PARALLEL)<br/>Analyze error logs<br/>Review API docs"]
+    BillingAgent["<b>BILLING AGENT</b><br/>(PARALLEL)<br/>Check payment records<br/>Verify subscriptions"]
+    KBAgent["<b>KB AGENT</b><br/>(PARALLEL)<br/>Search knowledge base<br/>Find similar solutions"]
+
+    TechResult["Technical Analysis<br/>+ Confidence Score"]
+    BillingResult["Billing Analysis<br/>+ Solution Options"]
+    KBResult["KB Match<br/>+ Confidence %"]
+
+    Routing["<b>ROUTING DECISION</b><br/>Evaluate all inputs:<br/>- KB Confidence > 80%?<br/>- Urgency level?<br/>- Customer tier?"]
+
+    HighConfidence{"KB Match<br/>> 80%?"}
+    IsUrgent{"Urgent or<br/>Enterprise?"}
+
+    AutoResp["<b>AUTO-RESPONSE</b><br/>Send KB solution<br/>Log in CRM<br/>~40% of tickets"]
+    HumanRoute["<b>ROUTE TO HUMAN</b><br/>Assign to team<br/>Priority by SLA<br/>~55% of tickets"]
+    Escalate["<b>ESCALATION</b><br/>Flag for manager<br/>Create incident<br/>~5% of tickets"]
+
+    Complete(["<b>COMPLETE</b><br/>Monitor SLA<br/>Background escalation"])
+
+    Start --> Triage
+    Triage --> TechCheck
+    TechCheck -->|Yes| TechAgent
+    TechCheck -->|No| BillingCheck
+    BillingCheck -->|Yes| BillingAgent
+    BillingCheck -->|No| KBAgent
+
+    TechAgent -.-> TechResult
+    BillingAgent -.-> BillingResult
+    KBAgent -.-> KBResult
+
+    TechResult --> Routing
+    BillingResult --> Routing
+    KBResult --> Routing
+
+    Routing --> HighConfidence
+    HighConfidence -->|Yes| AutoResp
+    HighConfidence -->|No| IsUrgent
+    IsUrgent -->|Yes| Escalate
+    IsUrgent -->|No| HumanRoute
+
+    AutoResp --> Complete
+    HumanRoute --> Complete
+    Escalate --> Complete
+
+    style Start fill:#e3f2fd,stroke:#333,stroke-width:2px
+    style Triage fill:#fff4e6,stroke:#333,stroke-width:2px
+    style TechAgent fill:#e8f5e9,stroke:#333,stroke-width:2px
+    style BillingAgent fill:#e8f5e9,stroke:#333,stroke-width:2px
+    style KBAgent fill:#e8f5e9,stroke:#333,stroke-width:2px
+    style Routing fill:#fff4e6,stroke:#333,stroke-width:2px
+    style AutoResp fill:#c8e6c9,stroke:#333,stroke-width:3px
+    style HumanRoute fill:#c8e6c9,stroke:#333,stroke-width:3px
+    style Escalate fill:#ffccbc,stroke:#333,stroke-width:3px
+    style Complete fill:#e1bee7,stroke:#333,stroke-width:2px

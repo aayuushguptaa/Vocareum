@@ -1,19 +1,64 @@
-%% TODO: Create a sequence diagram showing the interaction timeline between components
-%%
-%% Your diagram should include participants for:
-%% - Customer, Ticket System, Triage Agent, CRM, the 3 specialized agents,
-%%   Routing Agent, and Destination
-%%
-%% The sequence should show:
-%% - The CRM lookup that happens at triage time
-%% - A 'par' block for the 3 specialized agents working simultaneously
-%% - All agents reporting results back to the Routing Agent
-%% - Conditional routing outcomes using 'alt' / 'else' blocks
-%% - A note about the background SLA escalation agent
-%%
-%% Tip: use 'activate' / 'deactivate' to show when each agent is actively working
-%%      see demo/diagrams/sequence.mmd for sequenceDiagram syntax examples
-%% Render with: mmdc -i diagrams/sequence.mmd -o diagrams/sequence.svg
-
 sequenceDiagram
-    %% Define your actors/participants and show the interaction flow
+    actor Customer
+    participant TicketSys as Ticket System
+    participant Triage as Triage Agent
+    participant CRM
+    participant Tech as Technical Agent
+    participant Billing as Billing Agent
+    participant KB as KB Agent
+    participant Routing as Routing Agent
+    participant Destination
+
+    Customer->>TicketSys: Submit support ticket
+    TicketSys->>Triage: New ticket received
+    activate Triage
+
+    Triage->>CRM: Lookup customer profile
+    activate CRM
+    CRM-->>Triage: Customer tier, history
+    deactivate CRM
+
+    Note over Triage: Categorize issue<br/>Set SLA deadline
+
+    Triage->>Tech: Analyze if technical issue
+    Triage->>Billing: Analyze if billing issue
+    Triage->>KB: Search knowledge base
+
+    par Parallel Analysis
+        activate Tech
+        Tech->>Tech: Review error logs<br/>Check API docs
+        and
+        activate Billing
+        Billing->>Billing: Check payment records<br/>Verify subscriptions
+        and
+        activate KB
+        KB->>KB: Search similar issues<br/>Calculate confidence
+    end
+
+    Tech-->>Routing: Technical analysis result
+    deactivate Tech
+    Billing-->>Routing: Billing analysis result
+    deactivate Billing
+    KB-->>Routing: KB match + confidence
+    deactivate KB
+    deactivate Triage
+
+    activate Routing
+    Note over Routing: Decision Logic:<br/>- KB confidence > 80%?<br/>- Urgency level?<br/>- Customer tier?
+
+    alt High KB Confidence (>80%)
+        Routing->>Destination: Auto-response with solution
+        Note over Destination: Send FAQ/Solution<br/>~40% of tickets
+    else Urgent/Enterprise
+        Routing->>Destination: Escalate to manager
+        Note over Destination: Create incident<br/>~5% of tickets
+    else Default
+        Routing->>Destination: Route to human team
+        Note over Destination: L1/L2 Support<br/>~55% of tickets
+    end
+
+    deactivate Routing
+    Destination-->>Customer: Ticket acknowledged
+    TicketSys->>TicketSys: Background SLA Monitor<br/>Escalate if time running out
+
+    Note over TicketSys: Continuous monitoring<br/>for SLA compliance

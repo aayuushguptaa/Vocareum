@@ -68,7 +68,12 @@ export const SalesBriefingJSONSchema = zodToJsonSchema(SalesBriefingSchema, {
 // -----------------------------------------------------------------------------
 
 async function* generateMessages(userMessage: string) {
-  throw new Error("TODO: Implement generateMessages async generator");
+  yield {
+    type: "user" as const,
+    message: { role: "user" as const, content: userMessage },
+    parent_tool_use_id: null,
+    session_id: "sales-qualifier-session",
+  };
 }
 
 // -----------------------------------------------------------------------------
@@ -83,10 +88,19 @@ const subagents: Record<string, AgentDefinition> = {
   // - prompt: Instructions for gathering company size, industry, tech stack, news
   // - tools: ["WebSearch"] (for web research)
   "company-researcher": {
-    description: "", // TODO: Add description
-    prompt: "", // TODO: Add prompt
-    tools: [], // TODO: What tools does this agent need?
-    model: "sonnet", // Use model string
+    description: "Research specialist that gathers company intelligence",
+    prompt: `You are a company research specialist.
+
+When asked to research a company, gather:
+1. Company size (employees, revenue)
+2. Industry and market position
+3. Technology stack they use
+4. Recent news and developments
+
+IMPORTANT: Use no more than 5 web searches total. Be strategic with your queries.
+Focus on information relevant to B2B software sales.`,
+    tools: ["WebSearch"], // This agent needs WebSearch to research companies
+    model: "haiku", // Use haiku for efficient research
   },
 
   // TODO: Define "competitive-analyzer" agent
@@ -95,8 +109,16 @@ const subagents: Record<string, AgentDefinition> = {
   // - tools: [] (no tools needed, uses provided context)
   // - model: "haiku" (simpler analysis, lower cost)
   "competitive-analyzer": {
-    description: "", // TODO: Add description
-    prompt: "", // TODO: Add prompt
+    description: "Analyst that compares prospect's solution to ours",
+    prompt: `You are a competitive analysis specialist.
+
+When given company information, analyze:
+1. What solutions they currently use
+2. Our advantages over competitors
+3. Potential concerns they might have
+4. Switching barriers and costs
+
+Focus on strategic positioning for sales conversations.`,
     tools: [], // No tools needed
     model: "haiku",
   },
@@ -107,8 +129,21 @@ const subagents: Record<string, AgentDefinition> = {
   // - tools: [] (no tools needed)
   // - model: "haiku"
   "qualification-scorer": {
-    description: "", // TODO: Add description
-    prompt: "", // TODO: Add prompt
+    description: "Scorer that assesses BANT criteria and deal probability",
+    prompt: `You are a sales qualification specialist.
+
+Given research and competitive analysis, assess BANT:
+- Budget: Can they afford us? Estimated budget?
+- Authority: Is contact a decision maker?
+- Need: What pain points? How urgent?
+- Timeline: When might they decide?
+
+Calculate deal size and win probability (0-100%).
+
+RULES:
+- Company <10 employees = Disqualify
+- No clear pain points = Nurture
+- Using competitor = Highlight switching ROI`,
     tools: [],
     model: "haiku",
   },
@@ -166,5 +201,37 @@ Return the briefing as structured JSON.`;
   // - Log Task tool invocations (when block.type === "tool_use" && block.name === "Task")
   // - Return SalesBriefingSchema.parse(message.structured_output) when result is success
 
-  throw new Error("TODO: Implement qualifyOpportunity using query() with subagents");
+  for await (const message of query({
+    prompt: generateMessages(orchestratorPrompt),
+    options: {
+      allowedTools: ["Task"],
+      agents: subagents,
+      model: "sonnet",
+      outputFormat: {
+        type: "json_schema",
+        schema: SalesBriefingJSONSchema,
+      },
+      maxTurns: 15,
+    },
+  })) {
+    // Handle message stream
+    if (message.type === "assistant") {
+      const content = message.message?.content;
+      if (Array.isArray(content)) {
+        for (const block of content) {
+          if (block.type === "tool_use" && block.name === "Task") {
+            const input = block.input as { description?: string };
+            console.log(`Invoking subagent: ${input.description || "task"}`);
+          }
+        }
+      }
+    } else if (message.type === "result" && message.subtype === "success" && message.structured_output) {
+      // Return the structured result
+      return SalesBriefingSchema.parse(message.structured_output);
+    } else if (message.type === "result" && message.subtype !== "success") {
+      throw new Error(`Qualification failed: ${message.subtype}`);
+    }
+  }
+
+  throw new Error("Failed to generate sales briefing");
 }

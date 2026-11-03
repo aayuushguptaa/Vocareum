@@ -1,15 +1,39 @@
-%% TODO: Design the background SLA monitoring / escalation agent
-%%
-%% Your diagram should describe an agent that:
-%% - Runs on a regular schedule (how often?)
-%% - Queries open tickets and checks time remaining vs SLA deadline
-%% - Alerts the team lead when a ticket is close to breaching SLA
-%% - Escalates to a manager and logs a compliance violation when SLA is breached
-%%
-%% Include: run frequency, escalation thresholds, tools used, model choice
-%% Tip: use a warning/alert color for the node style
-%%      see demo/diagrams/sla-monitoring.mmd for color and syntax examples
-%% Render with: mmdc -i diagrams/sla-monitoring.mmd -o diagrams/sla-monitoring.svg
-
 graph TB
-    %% Define your escalation agent node here
+    Schedule["<b>Scheduler</b><br/>Runs every 5 minutes"]
+
+    Monitor["<b>SLA Monitoring Agent</b><br/><br/><b>Tools:</b><br/>- Ticket System Query<br/>- Alerts/Notifications<br/>- Compliance Logger<br/><br/><b>Model:</b> Haiku<br/><br/><b>Frequency:</b> Every 5 min"]
+
+    Query["Query Open Tickets<br/>Get SLA deadlines"]
+
+    Check{"Time remaining<br/>vs deadline?"}
+
+    HealthyStatus["✓ Healthy<br/>> 20% time remaining<br/>No action needed"]
+
+    AtRisk["⚠️ At Risk<br/>< 20% time remaining<br/>Alert Team Lead"]
+
+    Breached["🚨 SLA Breached<br/>Time exceeded<br/>Escalate to Manager"]
+
+    AlertTeam["Send Slack/Email Alert<br/>to Team Lead<br/>Suggest priority routing"]
+
+    AlertManager["Notify Manager<br/>Create incident log<br/>Compliance violation record<br/>Request immediate action"]
+
+    Schedule --> Monitor
+    Monitor --> Query
+    Query --> Check
+    Check -->|Healthy| HealthyStatus
+    Check -->|At Risk| AtRisk
+    Check -->|Breached| Breached
+    AtRisk --> AlertTeam
+    Breached --> AlertManager
+    AlertTeam --> Monitor
+    AlertManager --> Monitor
+
+    style Schedule fill:#e3f2fd,stroke:#333,stroke-width:2px
+    style Monitor fill:#fff4e6,stroke:#333,stroke-width:2px
+    style Query fill:#fff9c4,stroke:#333,stroke-width:2px
+    style Check fill:#fff9c4,stroke:#333,stroke-width:2px
+    style HealthyStatus fill:#c8e6c9,stroke:#333,stroke-width:2px
+    style AtRisk fill:#ffe0b2,stroke:#333,stroke-width:2px
+    style Breached fill:#ffccbc,stroke:#333,stroke-width:2px
+    style AlertTeam fill:#fff3e0,stroke:#333,stroke-width:2px
+    style AlertManager fill:#ffcdd2,stroke:#333,stroke-width:2px

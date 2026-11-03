@@ -81,37 +81,39 @@ INSTRUCTIONS:
 
 ### Agent Definitions
 
-<!-- TODO: Complete this table with your agent designs -->
-
 | Agent | Responsibility | Tools | Model | Parallel? |
 |-------|---------------|-------|-------|-----------|
-| TODO | TODO | TODO | TODO | TODO |
-| TODO | TODO | TODO | TODO | TODO |
-| TODO | TODO | TODO | TODO | TODO |
-| TODO | TODO | TODO | TODO | TODO |
-
-<!--
-HINTS:
-- Triage Agent: Entry point, categorizes tickets, looks up customer
-- Technical Agent: Analyzes technical issues if ticket is tech-related
-- Billing Agent: Handles payment/account issues if billing-related
-- Knowledge Base Agent: Always runs, searches for existing solutions
-- Routing Agent: Makes final routing decision based on all analysis
-- Escalation Agent: Optional background agent for SLA monitoring
--->
+| Triage | Entry point; categorizes urgency, type, customer tier; sets SLA deadline | CRM Lookup, Customer DB | Haiku | Entry point (sequential) |
+| Technical | Analyzes technical issues; reviews logs, API docs, error traces | Error Logs, API Docs, GitHub Issues | Sonnet | Yes (parallel) |
+| Billing | Handles payment/account issues; checks charges, refunds, subscriptions | Billing API, Payment Records | Haiku | Yes (parallel) |
+| Knowledge Base | Searches for existing solutions to common issues; calculates match confidence | KB Search, FAQ Database | Haiku | Yes (parallel) |
+| Routing | Makes final routing decision based on all analysis inputs | Ticket System, Team Queues | Haiku | After analysis (sequential) |
+| Escalation | Background SLA monitor; escalates when SLA at risk or breached | Ticket Query, Alerts, Logging | Haiku | Background (continuous every 5min) |
 
 ### Pros
 
-<!-- TODO: List advantages of multi-agent approach -->
+- **Parallel Processing**: Technical, Billing, and KB agents run simultaneously → 4-5x faster than sequential
+- **Specialization**: Each agent optimized for specific domain (e.g., Sonnet for complex technical analysis)
+- **Scalability**: Easy to add new specialized agents (Sales Agent, Compliance Agent, etc.)
+- **Cost Optimization**: Use cheap Haiku for simple tasks, reserve Sonnet for complex reasoning
+- **Resilience**: Failure of one agent doesn't block others; graceful degradation possible
+- **40% Auto-Resolution**: Knowledge base matching prevents unnecessary human involvement
+- **SLA Compliance**: Background escalation agent ensures enterprise SLA is monitored
 
 ### Cons
 
-<!-- TODO: List disadvantages of multi-agent approach -->
+- **Complexity**: More moving parts, harder to debug if something fails
+- **State Management**: Must coordinate results from multiple agents and merge decisions
+- **Latency**: Parallel execution adds network overhead (though offset by time savings)
+- **Consistency**: Potential race conditions if agents update shared state
+- **Infrastructure**: Requires queuing, load balancing, monitoring for multiple agents
 
 ### Estimated Performance
 
-<!-- TODO: Provide performance estimates -->
-<!-- Consider: processing time, daily capacity, SLA compliance -->
+- **Processing time**: 5-10 seconds per ticket (vs 30-60 seconds single-agent)
+- **Daily capacity**: 50,000+ tickets (vs 2,500 single-agent)
+- **Auto-resolution rate**: ~40% (FAQ/solution sent automatically)
+- **SLA compliance**: 98%+ (with background escalation monitoring)
 
 ---
 
@@ -197,66 +199,59 @@ INSTRUCTIONS:
 
 ## Failure Mode Analysis
 
-<!-- TODO: Complete the failure mode analysis table -->
-
 | Failure | Impact | Mitigation |
 |---------|--------|------------|
-| TODO | TODO | TODO |
-| TODO | TODO | TODO |
-| TODO | TODO | TODO |
-| TODO | TODO | TODO |
-| TODO | TODO | TODO |
-
-<!--
-HINTS - Consider these failure scenarios:
-- Triage Agent down
-- Technical Agent slow/timeout
-- Knowledge Base search fails
-- CRM unavailable
-- Escalation Agent crashes
-- Network issues
-- API rate limits
-
-For each, think about:
-- IMPACT: What breaks? What's delayed?
-- MITIGATION: Fallback strategy, degraded mode, alerts
--->
+| **Triage Agent down** | All new tickets queued; system halts | Fallback: Auto-route by received timestamp or round-robin; queue tickets until recovery |
+| **Technical Agent slow/timeout** | Tech tickets delayed; other agents complete | Timeout after 8 seconds; route to human if no response; don't block KB/Billing |
+| **KB search fails** | No auto-responses possible; lower resolution rate | Degraded mode: Route to human; log error; retry KB every 30 seconds |
+| **CRM unavailable** | Can't verify customer tier; can't set correct SLA | Treat all as enterprise (safer); use backup customer database; alert ops team |
+| **Escalation Agent crashes** | Missed SLA violations; no alerts | Dead-man switch: If no heartbeat for 5 minutes, trigger manual escalation check; send alert |
+| **Billing API rate limits** | Billing agent times out | Implement circuit breaker; cache recent queries; fall back to generic billing response |
+| **Routing Agent failure** | Tickets stuck in analysis state | Fallback: Route all to human team with full analysis data; escalate urgent tickets |
+| **Network partition** | Multiple agents can't communicate | Each agent completes independently; Routing merges partial results; SLA escalation continues locally |
 
 ---
 
 ## Recommendation
 
-<!-- TODO: Choose Option A or Option B and justify your decision -->
+**Choose Option B (Multi-Agent) because:**
 
-**Choose Option [A or B] because:**
-
-<!-- TODO: Provide 3-5 reasons based on:
-- Volume requirements (5,000+ tickets/day)
-- Speed requirements (1-hour enterprise SLA)
-- Specialization needs (technical vs billing expertise)
-- Scalability (easy to add new agent types?)
-- Cost vs benefit trade-offs
--->
+1. **Volume Requirements**: 5,000+ tickets/day demand parallel processing. Single agent can only handle 2,500; multi-agent handles 50,000+
+2. **Speed is Critical**: 1-hour enterprise SLA requires < 10 second response time. Parallel agents achieve this; sequential processing takes 30-60 seconds
+3. **Specialization Improves Quality**: Technical issues need Sonnet-level reasoning; billing issues need fast routing. One agent can't specialize
+4. **Scalability**: Easy to add new agents (Sales, Compliance, etc.) without redesigning core; single agent would need complete rewrite
+5. **Cost Efficiency**: 40% auto-resolution saves ~$200K/year on support staff (5,000 × 40% × $0.01 per auto-resolution vs human time)
 
 ### Estimated Performance
 
-<!-- TODO: Provide specific performance estimates for your chosen approach -->
-
-- Processing time: TODO seconds per ticket
-- Daily capacity: TODO tickets
-- Auto-resolution rate: TODO%
-- SLA compliance: TODO%
+- **Processing time**: 5-10 seconds per ticket (parallel vs 30-60 seconds sequential)
+- **Daily capacity**: 50,000+ tickets (vs 2,500 single-agent)
+- **Auto-resolution rate**: 40% (FAQ/solution sent automatically)
+- **SLA compliance**: 98%+ with background escalation monitoring
+- **Estimated annual cost savings**: ~$200K from auto-resolution + improved efficiency
 
 ---
 
 ## Key Takeaways
 
-<!-- TODO: Write 3-4 key learnings from this architecture exercise -->
+1. **High-Volume Systems Need Parallelization**
+   - Single agent bottleneck at ~2,500 tickets/day regardless of optimization
+   - Parallel agents achieve 20x throughput (50,000+ tickets/day)
+   - For enterprise systems, parallelization is not optional—it's architectural requirement
 
-1. **TODO** - Your first key takeaway
+2. **SLA Requirements Drive Architecture Decisions**
+   - 1-hour enterprise SLA forces < 10 second processing time
+   - Background escalation agent essential for compliance (not optional feature)
+   - Monitoring agent must run independently from main flow
 
-2. **TODO** - Your second key takeaway
+3. **Specialization Beats Generalization**
+   - Technical issues need deep reasoning (Sonnet) but are rare
+   - Billing issues are straightforward (Haiku is sufficient)
+   - One-size-fits-all agent wastes money or sacrifices quality
+   - Right tool for the right job = better outcomes + lower cost
 
-3. **TODO** - Your third key takeaway
-
-4. **TODO** - Your fourth key takeaway (optional)
+4. **Design for Failure From Day One**
+   - Every component fails; assume it and plan fallbacks
+   - Multi-agent systems must degrade gracefully, not fail catastrophically
+   - Dead-man switches and health checks for background agents prevent silent failures
+   - CRM unavailable? Treat all as enterprise (safer). KB down? Route to human. Acceptable tradeoff.

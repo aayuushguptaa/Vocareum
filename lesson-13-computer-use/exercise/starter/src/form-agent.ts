@@ -40,7 +40,12 @@ const DISPLAY_HEIGHT = parseInt(process.env.DISPLAY_HEIGHT || "768");
 export function createComputerTool(): ComputerUseTool {
   // TODO: (1) Implement this function
   // HINT: The tool type must be exactly "computer_20250124"
-  throw new Error("TODO: Implement createComputerTool");
+  return {
+    type: "computer_20250124",
+    name: "computer",
+    display_width_px: DISPLAY_WIDTH,
+    display_height_px: DISPLAY_HEIGHT,
+  };
 }
 
 // -----------------------------------------------------------------------------
@@ -140,7 +145,14 @@ export async function runFormAutomationAgent(
     // - tools: tools (cast to Anthropic.Beta.BetaTool[])
     // - messages: messages
     // - betas: ["computer-use-2025-01-24"]
-    const response = null as any; // TODO: Replace with actual API call
+    const response = await client.beta.messages.create({
+      model: "claude-sonnet-4-5-20250929",
+      max_tokens: 4096,
+      system: systemPrompt,
+      tools: tools as Anthropic.Beta.BetaTool[],
+      messages,
+      betas: ["computer-use-2025-01-24"],
+    });
 
     console.log(`Stop reason: ${response.stop_reason}`);
 
@@ -185,6 +197,31 @@ export async function runFormAutomationAgent(
         // }
 
         // TODO: Implement tool result formatting and push to toolResults
+        if (result.screenshot) {
+          // Format screenshot as image content
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: "image/png",
+                  data: result.screenshot,
+                },
+              },
+            ],
+          });
+        } else {
+          // Format other actions as text content
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: block.id,
+            content: result.output || result.error || "Action completed",
+            is_error: !result.success,
+          });
+        }
       }
     }
 
@@ -200,6 +237,8 @@ export async function runFormAutomationAgent(
     // 2. { role: "user", content: toolResults }
 
     // TODO: Implement message appending
+    messages.push({ role: "assistant", content: response.content });
+    messages.push({ role: "user", content: toolResults });
   }
 
   return {

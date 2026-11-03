@@ -1,10 +1,12 @@
 /**
  * Subagent exports
  *
- * TODO: Export all your agent definitions here
- *
- * Example:
- * export { codeQualityAnalyzer } from './code-quality-analyzer';
- * export { testCoverageAnalyzer } from './test-coverage-analyzer';
- * export { refactoringSuggester } from './refactoring-suggester';
+ * Three specialized agents for comprehensive code review:
+ * 1. Code Quality Analyzer - Security, performance, best practices
+ * 2. Test Coverage Analyzer - Identify untested paths and edge cases
+ * 3. Refactoring Suggester - Modernization and pattern improvements
  */
+
+export { codeQualityAnalyzer, buildCodeQualityPrompt } from './code-quality-analyzer.js';
+export { testCoverageAnalyzer, buildTestCoveragePrompt } from './test-coverage-analyzer.js';
+export { refactoringSuggester, buildRefactoringPrompt } from './refactoring-suggester.js';
